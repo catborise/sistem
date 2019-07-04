@@ -1,0 +1,97 @@
+# Blok operasyonu kontrolu, ilerleme durumu
+virsh qemu-monitor-command gwtest '{"execute":"query-block-jobs"}' --pretty
+
+virsh qemu-monitor-command gwtest '{"execute":"block-job-cancel"}' --pretty
+
+# Full Backup
+#virsh qemu-monitor-command gwtest  --pretty '{ "execute": "transaction","arguments": {"actions": [{"type": "block-dirty-bitmap-add", "data": {"node": "drive-virtio-disk0", "name": "bitmap0"} },{"type": "drive-backup", "data": {"device": "drive-virtio-disk0", "target": "/media/backup_test/gwtest/gwtest-full.qcow2", "format": "qcow2", "sync": "full"}}]}}'
+virsh qemu-monitor-command gwtest  --pretty '{ "execute": "transaction",
+    "arguments": {
+        "actions": [
+            {"type": "block-dirty-bitmap-add", "data": {"node": "drive-virtio-disk0", "name": "bitmap0"} },
+            {"type": "drive-backup", 
+                "data": {"device": "drive-virtio-disk0", "target": "/media/backup_test/gwtest/gwtest-full.qcow2", "format": "qcow2", "sync": "full"}
+	    }
+          ]
+    }
+}'
+
+
+# Compressed Full Backup
+virsh qemu-monitor-command gwtest  --pretty '
+{ "execute": "transaction",
+      "arguments": {
+          "actions": [
+              {"type": "block-dirty-bitmap-add", "data": {"node": "drive-virtio-disk0", "name": "bitmap0"} },
+              {"type": "drive-backup",
+                     "data": {"device": "drive-virtio-disk0", "target": "/media/backup_test/gwtest/gwtest-full.qcow2", "format": "qcow2", "sync": "full", "compress": true}
+			  }
+		   ]
+ }
+}'
+# incremental backup
+# qemu-img create /media/backup_test/gwtest/gwtest-inc.0.qcow2 -b /media/backup_test/gwtest/gwtest-full.qcow2 -f qcow2 -F qcow2;chown qemu:qemu /media/backup_test/ -R
+virsh qemu-monitor-command gwtest --pretty '
+{ "execute": "drive-backup",
+    "arguments": {
+        "device": "drive-virtio-disk0",
+        "bitmap": "bitmap0",
+        "target": "/media/backup_test/gwtest/gwtest-inc.0.qcow2",
+        "format": "qcow2",
+        "sync": "incremental",
+        "mode": "existing"
+    }
+}'
+
+virsh qemu-monitor-command gwtest --pretty '
+{ "execute": "block-commit",
+    "arguments": {
+	 "device": "drive-virtio-disk0",
+	 "top": "/mediat"
+
+}
+}'
+
+#virsh qemu-monitor-command gwtest --pretty '{"execute": "query-block"}'|grep device
+#virsh qemu-monitor-command gwtest --pretty '{"execute": "block-dirty-bitmap-remove","arguments": {"node": "drive-virtio-disk0", "name": "bitmap0"}}'
+virsh qemu-monitor-command gwtest --pretty '
+{ "execute": "block-dirty-bitmap-remove",
+  "arguments": {
+    "node": "drive-virtio-disk0",
+    "name": "bitmap0"
+  }
+}'
+
+# list qmp commands
+# qemu-monitor-command webeng-prod --hmp ?
+
+#cancel block job
+qemu-monitor-command sas --hmp block_job_cancel drive-scsi0-0-0-1
+
+# list hmp commands
+qemu-monitor-command sas --hmp help
+
+
+# Snapshot create
+virsh snapshot-create-as --domain gwtest --name snap-1  --atomic --disk-only  --diskspec vda,snapshot=external
+
+# snapshot blockcommit
+virsh blockcommit gwtest vdb --active --verbose --pivot
+
+# mounting image on the host 
+mount -o loop,offset=32256 /path/to/image.img /mnt/mountpoint
+
+#convert img with specified 
+qemu-img convert sas02-diskc.qcow2_old sas02-diskc.qcow2 -O qcow2 -p -o lazy_refcounts=on,preallocation=metadata
+
+
+
+virt-install --connect qemu:///system --import \
+  --name egitim-ybs \
+  --ram 4096 --vcpus 2 \
+  --os-type=linux \
+  --os-variant=virtio26 \
+  --disk path=/var/lib/libvirt/images/egitim-ybs.qcow2,format=qcow2,bus=virtio \
+  --network bridge=br1_v226 \
+  --vnc --noautoconsole \
+  --print-xml > egitim-ybs.xml
