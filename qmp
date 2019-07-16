@@ -1,7 +1,7 @@
 # Blok operasyonu kontrolu, ilerleme durumu
 virsh qemu-monitor-command gwtest '{"execute":"query-block-jobs"}' --pretty
 
-virsh qemu-monitor-command gwtest '{"execute":"block-job-cancel"}' --pretty
+virsh qemu-monitor-command gwtest '{"execute":"block-job-cancel", "arguments": {"device": "drive-virtio-disk0"}}' --pretty
 
 # Full Backup
 #virsh qemu-monitor-command gwtest  --pretty '{ "execute": "transaction","arguments": {"actions": [{"type": "block-dirty-bitmap-add", "data": {"node": "drive-virtio-disk0", "name": "bitmap0"} },{"type": "drive-backup", "data": {"device": "drive-virtio-disk0", "target": "/media/backup_test/gwtest/gwtest-full.qcow2", "format": "qcow2", "sync": "full"}}]}}'
